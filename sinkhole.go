@@ -73,10 +73,11 @@ func handleRequest(conn net.Conn) {
 	fmt.Printf("Recieved %s\n", hexstr)
 
 	bufreader := bufio.NewReader(bytes.NewReader(buf[:readlen]))
-	bufline, lineprefix, err := bufreader.ReadLine()
 
 	req_re := regexp.MustCompile(`^(GET)\s(\S+)\s(HTTP\/1\.[01])$`)
 
+	// read first line of HTTP request
+	bufline, lineprefix, err := bufreader.ReadLine()
 	if (err == nil) {
 		if (lineprefix == false) {
 			fmt.Printf("Got first line: %s\n", bufline)
@@ -91,6 +92,37 @@ func handleRequest(conn net.Conn) {
 		} else {
 			fmt.Printf("Got truncated first line: %s\n", bufline)
 		}
+	} else {
+		return; // Couldn't read first line
+	}
+
+	header_re := regexp.MustCompile(`^([A-Za-z][A-Za-z0-9-]*):\s(.*)$`)
+	// Read any headers
+	for {
+		bufline, lineprefix, err := bufreader.ReadLine()
+
+		if (err != nil) {
+			break;
+		}
+
+		if (lineprefix == true) {
+			break;
+		}
+
+		bufstr := string(bufline)
+		if (bufstr == "") {
+			break;
+		}
+
+		matches := header_re.FindStringSubmatch(bufstr)
+		if (matches != nil) {
+			fmt.Printf("Header: %s; Value: %s\n",
+				matches[1], matches[2])
+		}
+		else {
+			break;
+		}
+
 	}
 
 	// Send a response back to person contacting us.
