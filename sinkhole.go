@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 	"encoding/hex"
+	"encoding/json"
 	"bytes"
 	"bufio"
 	"regexp"
@@ -18,6 +19,20 @@ const (
 	CONN_PORT = "3333"
 	CONN_TYPE = "tcp"
 )
+
+
+type log_req struct {
+	F_src_ip          string `json:"src_ip,omitempty"`
+	F_src_port        uint16 `json:"src_port,omitempty"`
+	F_dst_name        string `json:"dst_name,omitempty"`
+	F_url_path        string `json:"url_path,omitempty"`
+	F_bytes_client    uint32 `json:"bytes_client,omitempty"`
+	F_http_method     string `json:"http_method,omitempty"`
+	F_http_version    string `json:"http_version,omitempty"`
+	F_x_forwarded_for string `json:"x_forwarded_for,omitempty"`
+	F_http_referer    string `json:"http_referer,omitempty"`
+	F_http_user_agent string `json:"http_referer,omitempty"`
+}
 
 
 func main() {
@@ -49,6 +64,8 @@ func main() {
 
 // Handles incoming requests.
 func handleRequest(conn net.Conn) {
+
+	var  req log_req
 
 	// Close the socket when we're done
 	defer conn.Close()
@@ -86,6 +103,10 @@ func handleRequest(conn net.Conn) {
 			if (matches != nil) {
 				fmt.Printf("method: %s; path: %s; ver: %s\n",
 					matches[1], matches[2], matches[3])
+
+				req.F_http_method = string(matches[1])
+				req.F_url_path = string(matches[2])
+				req.F_http_version = string(matches[3])
 			} else {
 				fmt.Printf("Got nil matches!\n")
 			}
@@ -118,11 +139,16 @@ func handleRequest(conn net.Conn) {
 		if (matches != nil) {
 			fmt.Printf("Header: %s; Value: %s\n",
 				matches[1], matches[2])
-		}
-		else {
+		} else {
 			break;
 		}
 
+	}
+
+	fmt.Printf("Struct method is %s\n", req.F_http_method)
+	json_req, err :=  json.Marshal(req)
+	if (err == nil) {
+		fmt.Printf("JSON: %s\n", json_req)
 	}
 
 	// Send a response back to person contacting us.
